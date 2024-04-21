@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Recorder</title>
+    <style>
+        .recordButton {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: red;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <button id="recordButton" class="recordButton"></button>
+    <audio id="audioElement" controls></audio>
+
+    <script>
+        let mediaRecorder;
+        let chunks = [];
+
+        const recordButton = document.getElementById('recordButton');
+        const audioElement = document.getElementById('audioElement');
+
+        let isRecording = false;
+
+        recordButton.addEventListener('mousedown', startRecording);
+        recordButton.addEventListener('mouseup', stopRecording);
+        recordButton.addEventListener('mouseleave', stopRecording);
+
+        async function startRecording() {
+            isRecording = true;
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = event => {
+                chunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'audio/wav' });
+                const url = URL.createObjectURL(blob);
+                audioElement.src = url;
+                const formData = new FormData();
+                formData.append('audio', blob);
+
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                chunks = [];
+            };
+
+            mediaRecorder.start();
+        }
+
+        function stopRecording() {
+            if (isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+            }
+        }
+    </script>
+</body>
+</html>
